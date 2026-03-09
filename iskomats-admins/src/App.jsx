@@ -65,34 +65,36 @@ function AppContent() {
     <>
       {showNavbar && <Navbar />}
       <Routes>
-          <Route path='/dash' element={
-            <ProtectedRoute>
-              <Dash />
-            </ProtectedRoute>
-          } />
-          <Route path='/dash-africa' element={
-            <ProtectedRoute requiredRole="africa">
-              <DashAfrica />
-            </ProtectedRoute>
-          } />
-          <Route path='/dash-vilma' element={
-            <ProtectedRoute requiredRole="vilma">
-              <DashVilma />
-            </ProtectedRoute>
-          } />
-          <Route path='/dash-tulong' element={
-            <ProtectedRoute requiredRole="tulong">
-              <DashTulong />
-            </ProtectedRoute>
-          } />
-          <Route path='/login' element={<Login />} />
-          <Route path='/register' element={<Register />} />
-          <Route path='/forget-password' element={<ForgetPass />} />
-          <Route path='/reset-password' element={<ResetPass />} />
-          <Route path='/reset-password/:token' element={<ResetPass />} />
-          <Route path='/verify-email' element={<VerifyEmail />} />
-          <Route path='/verify-email/:token' element={<VerifyEmail />} />
-        </Routes>
+        <Route path='/' element={<Navigate to="/dash" replace />} />
+        <Route path='/dash' element={
+          <ProtectedRoute>
+            <Dash />
+          </ProtectedRoute>
+        } />
+        <Route path='/dash-africa' element={
+          <ProtectedRoute requiredRole="africa">
+            <DashAfrica />
+          </ProtectedRoute>
+        } />
+        <Route path='/dash-vilma' element={
+          <ProtectedRoute requiredRole="vilma">
+            <DashVilma />
+          </ProtectedRoute>
+        } />
+        <Route path='/dash-tulong' element={
+          <ProtectedRoute requiredRole="tulong">
+            <DashTulong />
+          </ProtectedRoute>
+        } />
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
+        <Route path='/forget-password' element={<ForgetPass />} />
+        <Route path='/reset-password' element={<ResetPass />} />
+        <Route path='/reset-password/:token' element={<ResetPass />} />
+        <Route path='/verify-email' element={<VerifyEmail />} />
+        <Route path='/verify-email/:token' element={<VerifyEmail />} />
+        <Route path="*" element={<Navigate to="/dash" replace />} />
+      </Routes>
     </>
   );
 }

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
-import logo from '../../assets/scholarship-logo.png';
+import logo from '../../assets/ad3.jpg';
 import {
   FaCheckCircle,
   FaChevronDown,
   FaClock,
+  FaChartBar,
+  FaFilter,
+  FaEnvelope,
   FaHandsHelping,
   FaInbox,
   FaPaperPlane,
@@ -288,7 +291,19 @@ const initialTulongData = {
       acceptanceRate: 31.8, // percentage
       applicationCompletionRate: 75.6, // percentage
       satisfactionScore: 4.8, // out of 5
-    }
+    },
+    schoolStats: [
+      { school: 'De La Salle Lipa (DLSL)', count: 38, percentage: 13 },
+      { school: 'National University (NU) Lipa', count: 32, percentage: 11 },
+      { school: 'University of Batangas - Lipa Campus (UBLC)', count: 28, percentage: 10 },
+      { school: 'Batangas State University (Lipa Campus)', count: 35, percentage: 12 },
+      { school: 'Lipa City Colleges (LCC)', count: 22, percentage: 8 },
+      { school: 'STI College Lipa', count: 18, percentage: 6 },
+      { school: 'Philippine State College of Aeronautics (PhilSCA)', count: 21, percentage: 7 },
+      { school: 'AMA Computer College', count: 10, percentage: 3 },
+      { school: 'Batangas College of Arts and Sciences (BCAS)', count: 12, percentage: 4 },
+      { school: 'Kolehiyo ng Lungsod ng Lipa (KLL)', count: 68, percentage: 24 },
+    ]
   }
 };
 
@@ -297,7 +312,8 @@ export default function DashTulong() {
   const userName = localStorage.getItem('userName') || 'Admin';
   const userFirstName = localStorage.getItem('userFirstName') || 'Admin';
 
-  const [section, setSection] = useState('track');
+  const [section, setSection] = useState('dashboard');
+  const [reportsView, setReportsView] = useState('tables');
   const [trackTab, setTrackTab] = useState('all');
   const [data, setData] = useState(initialTulongData);
   const [searchTrack, setSearchTrack] = useState('');
@@ -329,6 +345,8 @@ export default function DashTulong() {
   const barChartInstance = useRef(null);
   const courseChartInstance = useRef(null);
   const financialChartInstance = useRef(null);
+  const schoolChartRef = useRef(null);
+  const schoolChartInstance = useRef(null);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -558,8 +576,25 @@ export default function DashTulong() {
       });
     }
 
+    // Doughnut Chart for School Distribution
+    if (schoolChartRef.current) {
+      const ctx = schoolChartRef.current.getContext('2d');
+      if (schoolChartInstance.current) schoolChartInstance.current.destroy();
+      schoolChartInstance.current = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: data.historicalData.schoolStats.map(s => s.school),
+          datasets: [{
+            data: data.historicalData.schoolStats.map(s => s.count),
+            backgroundColor: ['#800020', '#198754', '#0d6efd', '#ffc107', '#6c757d'],
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+      });
+    }
+
     return cleanupCharts;
-  }, [section, stats, data.historicalData]);
+  }, [section, reportsView, stats, data.historicalData]);
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -677,6 +712,83 @@ export default function DashTulong() {
 
     return filtered;
   }, [conversations, inboxSearch, inboxFilter]);
+
+  const renderDashboard = () => {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-300">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { label: 'Total Applicants', value: stats.total, icon: <FaUsers />, color: '#800020' },
+            { label: 'Accepted Scholars', value: stats.accepted, icon: <FaCheckCircle />, color: '#16a34a' },
+            { label: 'Pending Reviews', value: stats.pending, icon: <FaClock />, color: '#d97706' }
+          ].map((kpi, i) => (
+            <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 rounded-2xl" style={{ backgroundColor: `${kpi.color}15`, color: kpi.color }}>{kpi.icon}</div>
+                <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-md">LIVE</span>
+              </div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{kpi.label}</p>
+              <h3 className="text-3xl font-black text-gray-900 mt-1">{kpi.value}</h3>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Applicants */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+              <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Recent Applicants</h3>
+              <button onClick={() => setSection('track')} className="text-xs font-bold text-[#800020] hover:underline">View All</button>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {data.applicants.slice(0, 5).map((app, idx) => (
+                <div key={idx} className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => viewApplicantFn(idx, 'all')}>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#800020] to-[#650018] flex items-center justify-center text-white font-semibold">
+                    {(app.firstName?.[0] || app.name?.[0] || '').toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className="text-sm font-black text-gray-900">{app.lastName ? `${app.firstName} ${app.lastName}` : app.name}</span>
+                      <span className="text-[10px] font-bold text-[#800020] bg-rose-50 px-2 py-0.5 rounded-full">{app.course}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-1">{app.street ? `${app.barangay}, ${app.municipality}` : app.location}</p>
+                  </div>
+                </div>
+              ))}
+              {data.applicants.length === 0 && (
+                <div className="p-8 text-center text-gray-400 text-sm">No recent applicants found.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Messages */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+              <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Recent Messages</h3>
+              <button onClick={() => setSection('inbox')} className="text-xs font-bold text-[#800020] hover:underline">View Inbox</button>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {allMessages.slice(0, 5).map(msg => (
+                <div key={msg.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white bg-blue-500"><FaEnvelope /></div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className="text-sm font-black text-gray-900">{msg.studentName}</span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">{formatDate(msg.timestamp)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-1">{msg.subject}</p>
+                  </div>
+                </div>
+              ))}
+              {allMessages.length === 0 && (
+                <div className="p-8 text-center text-gray-400 text-sm">No recent messages.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderManage = () => {
     if (manageMode === 'list') {
@@ -921,7 +1033,7 @@ export default function DashTulong() {
             onClick={recommendStudents}
             className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
           >
-            <FaRobot /> AI Recommend
+            <FaRobot /> Recommended Student Applicants
           </button>
         </div>
 
@@ -996,10 +1108,18 @@ export default function DashTulong() {
     // Create worksheet for Monthly Trends
     const trendsWS = XLSX.utils.json_to_sheet(historicalData.monthlyApplications);
 
+    // Create worksheet for School Stats
+    const schoolWS = XLSX.utils.json_to_sheet(historicalData.schoolStats.map(item => ({
+      School: item.school,
+      Count: item.count,
+      Percentage: `${item.percentage}%`
+    })));
+
     // Create workbook and append sheets
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, locationWS, 'Location Statistics');
     XLSX.utils.book_append_sheet(wb, courseWS, 'Course Distribution');
+    XLSX.utils.book_append_sheet(wb, schoolWS, 'School Distribution');
     XLSX.utils.book_append_sheet(wb, metricsWS, 'Performance Metrics');
     XLSX.utils.book_append_sheet(wb, trendsWS, 'Monthly Trends');
 
@@ -1022,146 +1142,353 @@ export default function DashTulong() {
     return (
       <div className="space-y-6">
         {/* Header with Export Buttons */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap report-header">
           <div>
-            <h3 className="text-2xl font-bold text-[#800020]">Tulong Dulong Analytics</h3>
-            <p className="text-gray-500 text-sm">Comprehensive KPI report and periodic trends</p>
+            <h3 className="text-2xl font-bold text-[#800020] report-title">Tulong Scholarship Reports</h3>
+            <p className="text-gray-500 text-sm report-subtitle">Comprehensive KPI report and periodic trends</p>
+            <p className="print-only text-[10px] text-gray-400 mt-2 font-bold italic">Generated on: {new Date().toLocaleString()}</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={exportToExcel}
-              className="px-6 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
-            >
-              <FaPrint className="text-green-600" /> Export to Excel
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="px-6 py-2 rounded-xl bg-[#800020] text-white font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg"
-            >
-              <FaPrint /> Print PDF
-            </button>
+          <div className="flex gap-4 items-center flex-wrap">
+            <div className="flex bg-gray-100 p-1 rounded-xl">
+              <button
+                onClick={() => setReportsView('analytics')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportsView === 'analytics' ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >Analytics</button>
+              <button
+                onClick={() => setReportsView('tables')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportsView === 'tables' ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >Tables</button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={exportToExcel}
+                className="px-6 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
+              >
+                <FaPrint className="text-green-600" /> Export to Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-6 py-2 rounded-xl bg-[#800020] text-white font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg"
+              >
+                <FaPrint /> Print PDF
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Top KPI Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {kpiCards.map((card, idx) => (
-            <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-              <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{card.label}</span>
-              <span className="text-2xl font-black text-gray-800 mb-1">{card.value}</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                {card.trend}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Charts Middle Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Monthly Trends - Line Chart */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
-              <h4 className="text-lg font-bold text-gray-800">Monthly Applications</h4>
-              <div className="flex gap-4 text-xs font-bold uppercase tracking-tighter text-gray-400">
-                <span className="flex items-center gap-1"><div className="w-3 h-1 bg-[#800020] rounded"></div> Apps</span>
-                <span className="flex items-center gap-1"><div className="w-3 h-1 bg-[#198754] rounded"></div> Pass</span>
-              </div>
-            </div>
-            <div className="h-[280px]">
-              <canvas ref={lineChartRef} />
-            </div>
-          </div>
-
-          {/* Course Distribution - Horizontal Bars */}
-          <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-800 mb-6 font-primary">Course Distribution</h4>
-            <div className="h-[280px]">
-              <canvas ref={barChartRef} />
-            </div>
-          </div>
-
-          {/* Location/Stats - Doughnut */}
-          <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-800 mb-6">Location Split</h4>
-            <div className="h-[220px] mb-4">
-              <canvas ref={courseChartRef} />
-            </div>
-            <div className="space-y-2 mt-4">
-              {historicalData.courseDistribution.slice(0, 4).map((c, i) => (
-                <div key={i} className="flex items-center justify-between text-[10px] font-bold">
-                  <span className="text-gray-500">{c.course}</span>
-                  <span className="text-gray-800">{c.percentage}%</span>
+        {reportsView === 'analytics' ? (
+          <>
+            {/* Top KPI Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {kpiCards.map((card, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
+                  <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{card.label}</span>
+                  <span className="text-2xl font-black text-gray-800 mb-1">{card.value}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                    {card.trend}
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
 
-        {/* Bottom Data Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Location Stats Table */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <h4 className="text-lg font-bold text-gray-800 mb-6">Location Analytics</h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Barangay</th>
-                    <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Applicants</th>
-                    <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">% Distribution</th>
-                    <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Trend</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {historicalData.locationStats.slice(0, 10).map((loc, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-[#800020]">{loc.location}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${loc.count > 15 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          {loc.count}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 max-w-[100px]">
-                          <div className="bg-[#800020] h-1.5 rounded-full" style={{ width: `${loc.percentage}%` }}></div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-bold text-green-600 text-[10px]">{loc.percentage > 5 ? '↑ HIGH' : '→ STABLE'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Performance Metrics Table */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h4 className="text-lg font-bold text-gray-800 mb-6">Performance Details</h4>
-            <div className="space-y-4">
-              {[
-                { label: 'Acceptance Rate', value: `${historicalData.performanceMetrics.acceptanceRate}%`, color: 'bg-green-500' },
-                { label: 'Avg. Processing Time', value: `${historicalData.performanceMetrics.averageProcessingTime} days`, color: 'bg-blue-500' },
-                { label: 'Application Completion', value: `${historicalData.performanceMetrics.applicationCompletionRate}%`, color: 'bg-purple-500' },
-                { label: 'Satisfaction Score', value: `${historicalData.performanceMetrics.satisfactionScore}/5.0`, color: 'bg-amber-500' },
-              ].map((metric, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <span className="font-bold text-gray-600 text-sm">{metric.label}</span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-lg font-black text-gray-800">{metric.value}</span>
-                    <div className={`w-2 h-8 rounded-full ${metric.color}`}></div>
+            {/* Charts Middle Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Monthly Trends - Line Chart */}
+              <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-6">
+                  <h4 className="text-lg font-bold text-gray-800">Monthly Applications</h4>
+                  <div className="flex gap-4 text-xs font-bold uppercase tracking-tighter text-gray-400">
+                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-[#800020] rounded"></div> Apps</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-[#198754] rounded"></div> Pass</span>
                   </div>
                 </div>
-              ))}
-              <div className="mt-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100 italic text-[11px] text-blue-800 leading-relaxed">
-                "Trends indicate an efficiency boost in the last quarter, reducing average processing time by 12% across all scholarship categories."
+                <div className="h-[280px]">
+                  <canvas ref={lineChartRef} />
+                </div>
+              </div>
+
+              {/* Course Distribution - Horizontal Bars */}
+              <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h4 className="text-lg font-bold text-gray-800 mb-6 font-primary">Course Distribution</h4>
+                <div className="h-[280px]">
+                  <canvas ref={barChartRef} />
+                </div>
+              </div>
+
+              {/* Location/Stats - Doughnut */}
+              <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h4 className="text-lg font-bold text-gray-800 mb-6">Location Split</h4>
+                <div className="h-[220px] mb-4">
+                  <canvas ref={courseChartRef} />
+                </div>
+                <div className="space-y-2 mt-4">
+                  {historicalData.courseDistribution.slice(0, 4).map((c, i) => (
+                    <div key={i} className="flex items-center justify-between text-[10px] font-bold">
+                      <span className="text-gray-500">{c.course}</span>
+                      <span className="text-gray-800">{c.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* School Distribution Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h4 className="text-lg font-bold text-gray-800 mb-6 font-primary">School Distribution</h4>
+                <div className="flex flex-col md:flex-row gap-6 items-center">
+                  <div className="h-[250px] w-full md:w-1/2">
+                    <canvas ref={schoolChartRef} />
+                  </div>
+                  <div className="w-full md:w-1/2 space-y-3">
+                    {historicalData.schoolStats.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ['#800020', '#198754', '#0d6efd', '#ffc107', '#6c757d'][i] }}></div>
+                          <span className="text-sm font-bold text-gray-600 truncate max-w-[150px]">{s.school}</span>
+                        </div>
+                        <span className="text-sm font-black text-gray-800">{s.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col justify-center">
+                <h4 className="text-[#800020] font-black text-xl mb-3">Academic Partner Insights</h4>
+                <p className="text-gray-700 leading-relaxed mb-4">
+                  Current data shows that <strong>{historicalData.schoolStats[0].school}</strong> remains the primary source of applicants for the Tulong Scholarship, contributing to {historicalData.schoolStats[0].percentage}% of the total application volume.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-blue-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Top Institution</p>
+                    <p className="font-bold text-gray-800 truncate text-xs">{historicalData.schoolStats[0].school}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-blue-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Institutional Diversity</p>
+                    <p className="font-bold text-gray-800">{historicalData.schoolStats.length} Schools</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </>
+        ) : (
+          <>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Monthly Trends Table */}
+                <div className="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Monthly Applications</h4>
+                  <div className="overflow-x-auto max-h-72">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Month</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Applications</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Accepted</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Declined</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.monthlyApplications.map((m, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020]">{m.month}</td>
+                            <td className="px-4 py-3 font-bold">{m.applications}</td>
+                            <td className="px-4 py-3 text-green-600 font-semibold">{m.accepted}</td>
+                            <td className="px-4 py-3 text-red-600 font-semibold">{m.declined}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Performance Metrics Table */}
+                <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Performance Details</h4>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Acceptance Rate', value: `${historicalData.performanceMetrics.acceptanceRate}%`, color: 'bg-green-500' },
+                      { label: 'Avg. Processing Time', value: `${historicalData.performanceMetrics.averageProcessingTime} days`, color: 'bg-blue-500' },
+                      { label: 'Application Completion', value: `${historicalData.performanceMetrics.applicationCompletionRate}%`, color: 'bg-purple-500' },
+                      { label: 'Satisfaction Score', value: `${historicalData.performanceMetrics.satisfactionScore}/5.0`, color: 'bg-amber-500' },
+                    ].map((metric, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <span className="font-bold text-gray-600 text-sm">{metric.label}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-black text-gray-800">{metric.value}</span>
+                          <div className={`w-2 h-8 rounded-full ${metric.color}`}></div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="mt-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100 italic text-[11px] text-blue-800 leading-relaxed">
+                      "Trends indicate an efficiency boost in the last quarter, reducing average processing time by 12% across all scholarship categories."
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Course Distribution Table */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Course Distribution</h4>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Course</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Count</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">%</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.courseDistribution.map((c, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020]">{c.course}</td>
+                            <td className="px-4 py-3">{c.count}</td>
+                            <td className="px-4 py-3 font-bold">{c.percentage}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Grade Distribution Table */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Grade Distribution</h4>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Grade Range</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Count</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">%</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.gradeRanges.map((g, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020]">{g.range}</td>
+                            <td className="px-4 py-3">{g.count}</td>
+                            <td className="px-4 py-3 font-bold">{g.percentage}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Financial Breakdown Table */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Financial Background</h4>
+                  <div className="overflow-x-auto max-h-60">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Level</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Count</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">%</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.financialBreakdown.map((f, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020]">{f.level}</td>
+                            <td className="px-4 py-3">{f.count}</td>
+                            <td className="px-4 py-3 font-bold">{f.percentage}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {/* Location Stats Table */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Location Analytics</h4>
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Barangay</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Applicants</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">% Distribution</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Trend</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.locationStats.map((loc, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020]">{loc.location}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${loc.count > 15 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                {loc.count}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 bg-gray-100 rounded-full h-1.5 max-w-[100px]">
+                                  <div className="bg-[#800020] h-1.5 rounded-full" style={{ width: `${loc.percentage}%` }}></div>
+                                </div>
+                                <span className="font-bold text-[10px] text-gray-700">{loc.percentage}%</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-green-600 text-[10px]">{loc.percentage > 5 ? '↑ HIGH' : '→ STABLE'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* School Analytics Table */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">School Distribution Table</h4>
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Institution / School</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Applicants</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">% Distribution</th>
+                          <th className="px-4 py-3 font-bold text-gray-500 uppercase tracking-widest text-[10px]">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {historicalData.schoolStats.map((s, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-[#800020] uppercase text-[11px]">{s.school}</td>
+                            <td className="px-4 py-3 font-bold">{s.count}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 bg-gray-100 rounded-full h-1.5 min-w-[80px]">
+                                  <div className="bg-green-600 h-1.5 rounded-full" style={{ width: `${s.percentage}%` }}></div>
+                                </div>
+                                <span className="font-bold">{s.percentage}%</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.percentage > 20 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {s.percentage > 20 ? 'PRIMARY' : 'SECONDARY'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -1325,29 +1652,6 @@ export default function DashTulong() {
               <p className="font-bold text-gray-800">{a.schoolSector || 'N/A'}</p>
             </div>
 
-            <div className="p-4 border-t border-gray-100 col-span-4 bg-rose-50/30">
-              <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Are you enjoying other educational financial assistance?</p>
-              <div className="flex gap-8 mt-1 mb-3">
-                <span className="flex items-center gap-2 text-sm font-bold">
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${a.educationalAssistance === 'Yes' ? 'bg-[#800020] border-[#800020]' : 'border-gray-300'}`}>
-                    {a.educationalAssistance === 'Yes' && <FaCheckCircle className="text-white text-xs" />}
-                  </div>
-                  YES
-                </span>
-                <span className="flex items-center gap-2 text-sm font-bold">
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${a.educationalAssistance === 'No' ? 'bg-[#800020] border-[#800020]' : 'border-gray-300'}`}>
-                    {a.educationalAssistance === 'No' && <FaCheckCircle className="text-white text-xs" />}
-                  </div>
-                  NO
-                </span>
-              </div>
-              {a.educationalAssistance === 'Yes' && (
-                <div className="mt-2 pt-2 border-t border-rose-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1 italic">If yes, please specify:</p>
-                  <p className="text-sm font-bold text-gray-800">1. {a.educationalAssistanceDetails || 'N/A'}</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
@@ -1679,11 +1983,13 @@ export default function DashTulong() {
           </div>
         </div>
         <nav className="flex-1">
-          {['manage', 'track', 'reports', 'inbox'].map((id) => (
+          {['dashboard', 'manage', 'track', 'reports', 'inbox'].map((id) => (
             <button key={id} type="button" onClick={() => setSection(id)} className={`w-full px-4 py-3 flex items-center justify-between hover:bg-[#650018] border-l-4 ${section === id ? 'border-rose-200 bg-[#650018]' : 'border-transparent'}`}>
               <span className="flex items-center gap-2">
+                {id === 'dashboard' && <FaTachometerAlt />}
+                {id === 'manage' && <FaFilter />}
                 {id === 'track' && <FaUsers />}
-                {id === 'reports' && <FaTachometerAlt />}
+                {id === 'reports' && <FaChartBar />}
                 {id === 'inbox' && <FaInbox />}
                 {id.charAt(0).toUpperCase() + id.slice(1)}
               </span>
@@ -1695,6 +2001,7 @@ export default function DashTulong() {
 
       <main className="flex-1 p-6 overflow-y-auto">
         <header className="bg-white rounded-xl shadow-sm px-6 py-4 mb-6 flex items-center gap-2 text-[#800020] font-bold text-xl"><FaTachometerAlt className="text-blue-600" /> Tulong Dulong Dashboard</header>
+        {section === 'dashboard' && renderDashboard()}
         {section === 'manage' && renderManage()}
         {section === 'track' && renderTrack()}
         {section === 'reports' && renderReports()}
