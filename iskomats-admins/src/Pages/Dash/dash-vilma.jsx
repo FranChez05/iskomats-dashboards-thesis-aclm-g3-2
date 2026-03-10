@@ -24,6 +24,7 @@ import {
   FaEdit,
   FaTrash,
   FaPlus,
+  FaFileExcel,
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
@@ -57,6 +58,7 @@ const initialVilmaData = {
       school: 'XYZ School',
       schoolId: '87654321',
       schoolAddress: 'Batangas City',
+      schoolContact: '(043) 723-1234',
       schoolSector: 'Private',
       grade: 92,
       financial: 'Low',
@@ -325,6 +327,7 @@ export default function DashVilma() {
   const [trackTab, setTrackTab] = useState('all');
   const [data, setData] = useState(initialVilmaData);
   const [searchTrack, setSearchTrack] = useState('');
+  const [reportTab, setReportTab] = useState('pending'); // pending | accepted | declined
   const [viewApplicant, setViewApplicant] = useState(null); // { listType, index }
   const [inboxSearch, setInboxSearch] = useState('');
   const [inboxFilter, setInboxFilter] = useState('all'); // all | pending | accepted
@@ -1046,7 +1049,13 @@ export default function DashVilma() {
   const renderTrack = () => {
     const filterList = (list) => {
       return list.filter((a) => {
-        return a.name.toLowerCase().includes(searchTrack.toLowerCase());
+        const search = searchTrack.toLowerCase();
+        return (
+          a.name.toLowerCase().includes(search) ||
+          (a.school && a.school.toLowerCase().includes(search)) ||
+          (a.schoolAddress && a.schoolAddress.toLowerCase().includes(search)) ||
+          (a.schoolContact && a.schoolContact.toLowerCase().includes(search))
+        );
       });
     };
 
@@ -1058,13 +1067,22 @@ export default function DashVilma() {
       <section className="bg-white p-6 rounded-xl shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <h3 className="text-xl font-semibold text-[#800020]">Vilma Scholarship - Track Applicants</h3>
-          <button
-            type="button"
-            onClick={recommendStudents}
-            className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
-          >
-            <FaRobot /> Recommended Student Applicants
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => exportToExcel('track')}
+              className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold flex items-center gap-2 hover:bg-green-700 transition-colors"
+            >
+              <FaFileExcel /> Export to Excel
+            </button>
+            <button
+              type="button"
+              onClick={recommendStudents}
+              className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
+            >
+              <FaRobot /> Recommended Student Applicants
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
@@ -1088,7 +1106,7 @@ export default function DashVilma() {
           <FaSearch className="text-[#800020]" />
           <input
             type="text"
-            placeholder="Search applicants by name..."
+            placeholder="Search by name, school, or address..."
             value={searchTrack}
             onChange={(e) => setSearchTrack(e.target.value)}
             className="bg-transparent border-none outline-none w-full text-sm font-medium"
@@ -1096,11 +1114,11 @@ export default function DashVilma() {
         </div>
         <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-[#800020] text-white"><th className="px-4 py-3 text-left font-semibold">Name</th><th className="px-4 py-3 text-left font-semibold">Grade</th><th className="px-4 py-3 text-left font-semibold">Financial</th><th className="px-4 py-3 text-left font-semibold">Action</th></tr></thead>
+            <thead><tr className="bg-[#800020] text-white"><th className="px-4 py-3 text-left font-semibold">Name</th><th className="px-4 py-3 text-left font-semibold">Grade</th><th className="px-4 py-3 text-left font-semibold">Financial</th><th className="px-4 py-3 text-left font-semibold">School</th><th className="px-4 py-3 text-left font-semibold">Contact & Address</th><th className="px-4 py-3 text-left font-semibold">Action</th></tr></thead>
             <tbody>
-              {trackTab === 'all' && allList.map((a) => { const idx = data.applicants.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'all')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold hover:bg-[#650018] transition-colors">View</button></td></tr>); })}
-              {trackTab === 'accepted' && acceptedList.map((a) => { const idx = data.accepted.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'accepted')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">View</button><button type="button" onClick={() => cancelApplicant('accepted', idx)} className="px-3 py-1 rounded bg-amber-500 text-gray-900 text-xs font-semibold">Cancel</button></td></tr>); })}
-              {trackTab === 'declined' && declinedList.map((a) => { const idx = data.declined.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'declined')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">View</button><button type="button" onClick={() => cancelApplicant('declined', idx)} className="px-3 py-1 rounded bg-amber-500 text-gray-900 text-xs font-semibold">Cancel</button></td></tr>); })}
+              {trackTab === 'all' && allList.map((a) => { const idx = data.applicants.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3 text-xs">{a.school}</td><td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'all')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold hover:bg-[#650018] transition-colors">View</button></td></tr>); })}
+              {trackTab === 'accepted' && acceptedList.map((a) => { const idx = data.accepted.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3 text-xs">{a.school}</td><td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'accepted')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">View</button><button type="button" onClick={() => cancelApplicant('accepted', idx)} className="px-3 py-1 rounded bg-amber-500 text-gray-900 text-xs font-semibold">Cancel</button></td></tr>); })}
+              {trackTab === 'declined' && declinedList.map((a) => { const idx = data.declined.indexOf(a); return (<tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50"><td className="px-4 py-3">{a.name}</td><td className="px-4 py-3">{a.grade}</td><td className="px-4 py-3">{a.financial}</td><td className="px-4 py-3 text-xs">{a.school}</td><td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td><td className="px-4 py-3"><button type="button" onClick={() => viewApplicantFn(idx, 'declined')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">View</button><button type="button" onClick={() => cancelApplicant('declined', idx)} className="px-3 py-1 rounded bg-amber-500 text-gray-900 text-xs font-semibold">Cancel</button></td></tr>); })}
             </tbody>
           </table>
         </div>
@@ -1108,8 +1126,55 @@ export default function DashVilma() {
     );
   };
 
-  const exportToExcel = () => {
-    const { historicalData } = data;
+  const exportToExcel = (type = 'report') => {
+    const { historicalData, applicants, accepted, declined } = data;
+
+    if (type === 'track') {
+      const filterListToExport = (list) => list.filter((a) => {
+        const search = searchTrack.toLowerCase();
+        return (
+          a.name.toLowerCase().includes(search) ||
+          (a.school && a.school.toLowerCase().includes(search)) ||
+          (a.schoolAddress && a.schoolAddress.toLowerCase().includes(search)) ||
+          (a.schoolContact && a.schoolContact.toLowerCase().includes(search))
+        );
+      });
+
+      const fileName = `Vilma_Tracking_Full_${new Date().toISOString().split('T')[0]}`;
+      const wb = XLSX.utils.book_new();
+
+      const formatTracking = (list) => list.map(app => ({
+        'Student Name': app.name,
+        'Grade': app.grade,
+        'Financial Status': app.financial,
+        'School': app.school,
+        'Contact No.': app.schoolContact || 'N/A',
+        'Address': app.schoolAddress || 'N/A',
+        'Course': app.course
+      }));
+
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(formatTracking(filterListToExport(applicants))), 'Pending Review');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(formatTracking(filterListToExport(accepted))), 'Accepted Scholars');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(formatTracking(filterListToExport(declined))), 'Declined - Cancelled');
+
+      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      return;
+    }
+
+    // Helper to format applicant data for Excel
+    const formatApplicants = (list) => list.map(app => ({
+      'Student Name': app.name || `${app.firstName} ${app.lastName}`,
+      'Grade': app.grade || 'N/A',
+      'Financial Status': app.financial || 'N/A',
+      'School': app.school || 'N/A',
+      'Contact No.': app.schoolContact || app.studentContact?.phone || 'N/A',
+      'Address': app.schoolAddress || app.location || (app.barangay ? `${app.barangay}, ${app.municipality}` : 'N/A')
+    }));
+
+    // Create worksheets for Applicant Statuses
+    const acceptedWS = XLSX.utils.json_to_sheet(formatApplicants(accepted));
+    const declinedWS = XLSX.utils.json_to_sheet(formatApplicants(declined));
+    const pendingWS = XLSX.utils.json_to_sheet(formatApplicants(applicants));
 
     // Create worksheet for Location Stats
     const locationData = historicalData.locationStats.map(item => ({
@@ -1147,6 +1212,9 @@ export default function DashVilma() {
 
     // Create workbook and append sheets
     const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, acceptedWS, 'Accepted Scholars');
+    XLSX.utils.book_append_sheet(wb, declinedWS, 'Declined-Cancelled');
+    XLSX.utils.book_append_sheet(wb, pendingWS, 'Pending Applicants');
     XLSX.utils.book_append_sheet(wb, locationWS, 'Location Statistics');
     XLSX.utils.book_append_sheet(wb, courseWS, 'Course Distribution');
     XLSX.utils.book_append_sheet(wb, schoolWS, 'School Distribution');
@@ -1516,6 +1584,95 @@ export default function DashVilma() {
                   </div>
                 </div>
               </div>
+
+              {/* DETAILED APPLICANT LISTS TABLES */}
+              <div className="space-y-8 mt-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-100 pb-2">
+                  <h4 className="text-xl font-black text-[#800020] uppercase">Applicant Status Lists</h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setReportTab('pending')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${reportTab === 'pending' ? 'bg-amber-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      PENDING
+                    </button>
+                    <button
+                      onClick={() => setReportTab('accepted')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${reportTab === 'accepted' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      ACCEPTED
+                    </button>
+                    <button
+                      onClick={() => setReportTab('declined')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${reportTab === 'declined' ? 'bg-red-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      DECLINED
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                  {/* Pending Applicants */}
+                  {reportTab === 'pending' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h5 className="text-sm font-black text-amber-600 uppercase mb-4 flex items-center gap-2">
+                        <FaClock /> Pending Review ({data.applicants.length})
+                      </h5>
+                      <div className="overflow-x-auto max-h-72">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {data.applicants.map((a, i) => (
+                              <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
+                            ))}
+                            {data.applicants.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No applicants found</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accepted Scholars */}
+                  {reportTab === 'accepted' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h5 className="text-sm font-black text-green-600 uppercase mb-4 flex items-center gap-2">
+                        <FaCheckCircle /> Accepted Scholars ({data.accepted.length})
+                      </h5>
+                      <div className="overflow-x-auto max-h-72">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {data.accepted.map((a, i) => (
+                              <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
+                            ))}
+                            {data.accepted.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No accepted scholars found</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Declined Applicants */}
+                  {reportTab === 'declined' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h5 className="text-sm font-black text-red-600 uppercase mb-4 flex items-center gap-2">
+                        <FaTimesCircle /> Declined / Cancelled ({data.declined.length})
+                      </h5>
+                      <div className="overflow-x-auto max-h-72">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {data.declined.map((a, i) => (
+                              <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
+                            ))}
+                            {data.declined.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No declined applicants found</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         )}
@@ -1633,6 +1790,78 @@ export default function DashVilma() {
                       <td className="border p-3 font-semibold">{loc.location}</td>
                       <td className="border p-3">{loc.count}</td>
                       <td className="border p-3 font-bold">{loc.percentage}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="print-break-before">
+              <h5 className="text-sm font-black text-[#800020] uppercase mb-4 border-l-4 border-[#800020] pl-3">Pending Applicants Review</h5>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border p-2 text-left">Student Name</th>
+                    <th className="border p-2 text-left">Grade</th>
+                    <th className="border p-2 text-left">Financial Status</th>
+                    <th className="border p-2 text-left">School Contact & Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.applicants.map((a, i) => (
+                    <tr key={i}>
+                      <td className="border p-2 font-bold">{a.name}</td>
+                      <td className="border p-2">{a.grade}</td>
+                      <td className="border p-2">{a.financial}</td>
+                      <td className="border p-2">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="print-break-before">
+              <h5 className="text-sm font-black text-[#800020] uppercase mb-4 border-l-4 border-[#800020] pl-3">Accepted Scholars List</h5>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border p-2 text-left">Student Name</th>
+                    <th className="border p-2 text-left">Grade</th>
+                    <th className="border p-2 text-left">Financial Status</th>
+                    <th className="border p-2 text-left">School Contact & Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.accepted.map((a, i) => (
+                    <tr key={i}>
+                      <td className="border p-2 font-bold">{a.name}</td>
+                      <td className="border p-2">{a.grade}</td>
+                      <td className="border p-2">{a.financial}</td>
+                      <td className="border p-2">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            <section className="print-break-before">
+              <h5 className="text-sm font-black text-[#800020] uppercase mb-4 border-l-4 border-[#800020] pl-3">Declined / Cancelled Applicants</h5>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border p-2 text-left">Student Name</th>
+                    <th className="border p-2 text-left">Grade</th>
+                    <th className="border p-2 text-left">Financial Status</th>
+                    <th className="border p-2 text-left">School Contact & Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.declined.map((a, i) => (
+                    <tr key={i}>
+                      <td className="border p-2 font-bold">{a.name}</td>
+                      <td className="border p-2">{a.grade}</td>
+                      <td className="border p-2">{a.financial}</td>
+                      <td className="border p-2">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1777,15 +2006,6 @@ export default function DashVilma() {
               <p className="font-bold text-gray-800">{a.course}</p>
             </div>
 
-            {/* Row 5: Special Info */}
-            <div className="p-4 border-t border-r border-gray-100 col-span-2 bg-yellow-50/30">
-              <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Type of Disability (if applicable)</p>
-              <p className="font-bold text-gray-800">{a.disabilityType || 'N/A'}</p>
-            </div>
-            <div className="p-4 border-t border-gray-100 col-span-2 bg-yellow-50/30">
-              <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Tribal Membership (if applicable)</p>
-              <p className="font-bold text-gray-800">{a.tribalMembership || 'N/A'}</p>
-            </div>
 
             {/* Row 6: School Attended */}
             <div className="p-4 border-t border-r border-gray-100 col-span-2">
