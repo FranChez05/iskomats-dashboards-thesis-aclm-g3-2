@@ -249,6 +249,22 @@ const initialAfricaData = {
       status: 'active'
     }
   ],
+  announcements: [
+    {
+      id: '1',
+      title: 'Welcome to Africa Scholarship Portal',
+      content: 'We are excited to launch our new portal for African scholarships. Stay tuned for more updates!',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'active'
+    },
+    {
+      id: '2',
+      title: 'Deadline Extension',
+      content: 'The deadline for the Africa Excellence Scholarship has been extended to March 30, 2026.',
+      date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'active'
+    }
+  ],
   historicalData: {
     monthlyApplications: [
       { month: '2025-06', applications: 45, accepted: 12, declined: 8 },
@@ -397,13 +413,17 @@ export default function DashAfrica() {
   const [imageModalSrc, setImageModalSrc] = useState(null);
   const [scholarshipImages, setScholarshipImages] = useState([]);
   const [manageMode, setManageMode] = useState('list'); // create | edit | list
+  const [manageTab, setManageTab] = useState('scholarship'); // scholarship | announcement
+  const [manageSearch, setManageSearch] = useState('');
+  const [showManageFilter, setShowManageFilter] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     deadline: '',
     eligibility: '',
     slots: '',
-    description: ''
+    description: '',
+    content: ''
   });
   const pieRef = useRef(null);
   const lineChartRef = useRef(null);
@@ -521,6 +541,76 @@ export default function DashAfrica() {
       }));
     }
   };
+
+  const saveAnnouncement = () => {
+    if (!formData.title || !formData.content) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const newAnnouncement = {
+      id: manageMode === 'edit' ? editingPost.id : Date.now().toString(),
+      title: formData.title,
+      content: formData.content,
+      date: manageMode === 'edit' ? editingPost.date : new Date().toISOString(),
+      status: 'active'
+    };
+
+    if (manageMode === 'edit') {
+      setData(prev => ({
+        ...prev,
+        announcements: prev.announcements.map(ann =>
+          ann.id === editingPost.id ? newAnnouncement : ann
+        )
+      }));
+    } else {
+      setData(prev => ({
+        ...prev,
+        announcements: [newAnnouncement, ...prev.announcements]
+      }));
+    }
+
+    resetForm();
+    setManageMode('list');
+  };
+
+  const editAnnouncement = (ann) => {
+    setEditingPost(ann);
+    setFormData({
+      title: ann.title,
+      content: ann.content,
+      deadline: '',
+      eligibility: '',
+      slots: '',
+      description: ''
+    });
+    setManageMode('edit');
+  };
+
+  const deleteAnnouncement = (annId) => {
+    if (confirm('Are you sure you want to delete this announcement?')) {
+      setData(prev => ({
+        ...prev,
+        announcements: prev.announcements.filter(ann => ann.id !== annId)
+      }));
+    }
+  };
+
+  const filteredScholarshipPosts = useMemo(() => {
+    return data.scholarshipPosts.filter(post => {
+      const matchesSearch = post.title.toLowerCase().includes(manageSearch.toLowerCase()) ||
+        post.description.toLowerCase().includes(manageSearch.toLowerCase());
+      return matchesSearch;
+    });
+  }, [data.scholarshipPosts, manageSearch]);
+
+  const filteredAnnouncements = useMemo(() => {
+    return data.announcements.filter(ann => {
+      const matchesSearch = ann.title.toLowerCase().includes(manageSearch.toLowerCase()) ||
+        ann.content.toLowerCase().includes(manageSearch.toLowerCase());
+      return matchesSearch;
+    });
+  }, [data.announcements, manageSearch]);
 
   const stats = useMemo(() => {
     const total = data.applicants.length + data.accepted.length + data.declined.length;
@@ -940,68 +1030,122 @@ export default function DashAfrica() {
     );
   };
 
-  const renderManage = () => {
-    if (manageMode === 'list') {
-      return (
-        <section className="bg-white p-6 rounded-xl shadow-sm">
-          <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
-            <h3 className="text-xl font-semibold text-[#800020]">Africa Scholarship - Manage Posts</h3>
-            <button
-              type="button"
-              onClick={() => {
-                resetForm();
-                setManageMode('create');
-              }}
-              className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
-            >
-              <FaPlus /> Add New Post
-            </button>
+  const renderManageList = () => {
+    const isScholarship = manageTab === 'scholarship';
+    const displayData = isScholarship ? filteredScholarshipPosts : filteredAnnouncements;
+
+    return (
+      <section className="bg-white p-6 rounded-xl shadow-sm">
+        <div className="flex flex-col gap-6">
+          {/* Header & Tabs */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-4">
+              <h3 className="text-xl font-semibold text-[#800020]">Africa Scholarship - Manage</h3>
+              <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setManageTab('scholarship')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${manageTab === 'scholarship' ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Scholarship Posts
+                </button>
+                <button
+                  onClick={() => setManageTab('announcement')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${manageTab === 'announcement' ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Announcements
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowManageFilter(!showManageFilter)}
+                className={`p-2 rounded-lg border transition-all ${showManageFilter ? 'bg-rose-50 border-rose-200 text-[#800020]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                title="Filter"
+              >
+                <FaFilter />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  setManageMode('create');
+                }}
+                className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
+              >
+                <FaPlus /> Add New {isScholarship ? 'Post' : 'Announcement'}
+              </button>
+            </div>
           </div>
 
+          {/* Filter Bar */}
+          {showManageFilter && (
+            <div className="flex gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex-1 relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={`Search ${isScholarship ? 'posts' : 'announcements'}...`}
+                  value={manageSearch}
+                  onChange={(e) => setManageSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800020]/20"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* List Content */}
           <div className="space-y-4">
-            {data.scholarshipPosts.length > 0 ? (
-              data.scholarshipPosts.map((post) => (
-                <div key={post.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+            {displayData.length > 0 ? (
+              displayData.map((item) => (
+                <div key={item.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-[#800020] mb-2">{post.title}</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                        <div><strong>Deadline:</strong> {post.deadline}</div>
-                        <div><strong>Slots:</strong> {post.slots}</div>
-                        <div><strong>Eligibility:</strong> {post.eligibility}</div>
-                        <div><strong>Status:</strong> <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">{post.status}</span></div>
-                      </div>
-                      <p className="text-sm text-gray-700 mt-3 line-clamp-2">{post.description}</p>
-                      {post.images && post.images.length > 0 && (
+                      <h4 className="text-lg font-semibold text-[#800020] mb-2">{item.title}</h4>
+                      {isScholarship ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                            <div><strong>Deadline:</strong> {item.deadline}</div>
+                            <div><strong>Slots:</strong> {item.slots}</div>
+                            <div><strong>Eligibility:</strong> {item.eligibility}</div>
+                            <div><strong>Status:</strong> <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">{item.status}</span></div>
+                          </div>
+                          <p className="text-sm text-gray-700 mt-3 line-clamp-2">{item.description}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-700 line-clamp-3">{item.content}</p>
+                      )}
+
+                      {isScholarship && item.images && item.images.length > 0 && (
                         <div className="flex gap-2 mt-3">
-                          {post.images.slice(0, 3).map((img) => (
+                          {item.images.slice(0, 3).map((img) => (
                             <img key={img.id} src={img.url} alt={img.name} className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
                           ))}
-                          {post.images.length > 3 && (
+                          {item.images.length > 3 && (
                             <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-600">
-                              +{post.images.length - 3}
+                              +{item.images.length - 3}
                             </div>
                           )}
                         </div>
                       )}
                       <div className="text-xs text-gray-500 mt-3">
-                        Created: {formatDate(post.createdAt)}
+                        {isScholarship ? 'Created' : 'Posted'}: {formatDate(isScholarship ? item.createdAt : item.date)}
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4">
                       <button
                         type="button"
-                        onClick={() => editPost(post)}
+                        onClick={() => isScholarship ? editPost(item) : editAnnouncement(item)}
                         className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                        title="Edit Post"
+                        title="Edit"
                       >
                         <FaEdit />
                       </button>
                       <button
                         type="button"
-                        onClick={() => deletePost(post.id)}
+                        onClick={() => isScholarship ? deletePost(item.id) : deleteAnnouncement(item.id)}
                         className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
-                        title="Delete Post"
+                        title="Delete"
                       >
                         <FaTrash />
                       </button>
@@ -1012,19 +1156,25 @@ export default function DashAfrica() {
             ) : (
               <div className="text-center py-12">
                 <FaImage className="text-4xl text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No scholarship posts yet. Create your first post!</p>
+                <p className="text-gray-500">No {isScholarship ? 'scholarship posts' : 'announcements'} found.</p>
               </div>
             )}
           </div>
-        </section>
-      );
+        </div>
+      </section>
+    );
+  };
+
+  const renderManage = () => {
+    if (manageMode === 'list') {
+      return renderManageList();
     }
 
     return (
       <section className="bg-white p-6 rounded-xl shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-6">
           <h3 className="text-xl font-semibold text-[#800020]">
-            {manageMode === 'edit' ? 'Edit Scholarship Post' : 'Create New Scholarship Post'}
+            {manageMode === 'edit' ? `Edit ${manageTab === 'scholarship' ? 'Scholarship Post' : 'Announcement'}` : `Create New ${manageTab === 'scholarship' ? 'Scholarship Post' : 'Announcement'}`}
           </h3>
           <button
             type="button"
@@ -1035,8 +1185,8 @@ export default function DashAfrica() {
           </button>
         </div>
 
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={(e) => { e.preventDefault(); saveScholarshipPost(); }}>
-          <div>
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={(e) => { e.preventDefault(); manageTab === 'scholarship' ? saveScholarshipPost() : saveAnnouncement(); }}>
+          <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-[#800020] mb-1">Title *</label>
             <input
               type="text"
@@ -1044,124 +1194,120 @@ export default function DashAfrica() {
               value={formData.title}
               onChange={handleFormChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              placeholder="e.g. Africa Scholarship 2026"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-[#800020] mb-1">Deadline *</label>
-            <input
-              type="date"
-              name="deadline"
-              value={formData.deadline}
-              onChange={handleFormChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-[#800020] mb-1">Eligibility *</label>
-            <input
-              type="text"
-              name="eligibility"
-              value={formData.eligibility}
-              onChange={handleFormChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              placeholder="e.g. African students with minimum 85% grade"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-[#800020] mb-1">Slots *</label>
-            <input
-              type="number"
-              name="slots"
-              value={formData.slots}
-              onChange={handleFormChange}
-              min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              required
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-[#800020] mb-1">Description *</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleFormChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[120px]"
-              placeholder="Full details about the scholarship..."
+              placeholder={manageTab === 'scholarship' ? "e.g. Africa Scholarship 2026" : "e.g. System Maintenance"}
               required
             />
           </div>
 
-          {/* Picture Upload Section */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-[#800020] mb-3">
-              <FaImage className="inline mr-2" />
-              Scholarship Images
-            </label>
+          {manageTab === 'scholarship' ? (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-[#800020] mb-1">Deadline *</label>
+                <input
+                  type="date"
+                  name="deadline"
+                  value={formData.deadline}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#800020] mb-1">Eligibility *</label>
+                <input
+                  type="text"
+                  name="eligibility"
+                  value={formData.eligibility}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                  placeholder="e.g. African students with minimum 85% grade"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#800020] mb-1">Slots *</label>
+                <input
+                  type="number"
+                  name="slots"
+                  value={formData.slots}
+                  onChange={handleFormChange}
+                  min="1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-[#800020] mb-1">Description *</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[120px]"
+                  placeholder="Full details about the scholarship..."
+                  required
+                />
+              </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#800020] transition-colors">
-              <input
-                type="file"
-                id="image-upload"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-[#800020] text-white rounded-lg hover:bg-[#650018] transition-colors"
-              >
-                <FaUpload />
-                Choose Images
-              </label>
-              <p className="text-sm text-gray-500 mt-2">Upload scholarship photos, banners, or promotional images</p>
-            </div>
-
-            {/* Image Preview Grid */}
-            {scholarshipImages.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-[#800020] mb-2">Uploaded Images ({scholarshipImages.length})</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {scholarshipImages.map((image) => (
-                    <div key={image.id} className="relative group">
-                      <img
-                        src={image.url}
-                        alt={image.name}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                      />
+              {/* Picture Upload Section */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-[#800020] mb-3">
+                  Upload Images
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  {scholarshipImages.map((img) => (
+                    <div key={img.id} className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 group">
+                      <img src={img.url} alt="upload preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => removeImage(image.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImage(img.id)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <FaTimesCircle className="text-xs" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 rounded-b-lg truncate">
-                        {image.name}
-                      </div>
                     </div>
                   ))}
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#800020] hover:bg-rose-50 transition-all">
+                    <FaUpload className="text-gray-400 mb-1" />
+                    <span className="text-[10px] font-bold text-gray-400">UPLOAD</span>
+                    <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
                 </div>
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-[#800020] mb-1">Announcement Content *</label>
+              <textarea
+                name="content"
+                value={formData.content}
+                onChange={handleFormChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[150px]"
+                placeholder="Write your announcement here..."
+                required
+              />
+            </div>
+          )}
 
-          <div className="md:col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={resetForm} className="px-4 py-2 rounded-lg bg-gray-500 text-white font-semibold hover:bg-gray-600 transition-colors">
+          <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => setManageMode('list')}
+              className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 font-semibold hover:bg-gray-50"
+            >
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold hover:bg-[#650018] transition-colors">
-              {manageMode === 'edit' ? 'Update Post' : 'Create Post'}
+            <button
+              type="submit"
+              className="px-6 py-2 rounded-lg bg-[#800020] text-white font-semibold hover:bg-[#650018] shadow-md transition-all"
+            >
+              {manageMode === 'edit' ? 'Update' : 'Publish'} {manageTab === 'scholarship' ? 'Post' : 'Announcement'}
             </button>
           </div>
         </form>
       </section>
     );
   };
+
 
   const renderTrack = () => {
     const filterList = (list) => {
