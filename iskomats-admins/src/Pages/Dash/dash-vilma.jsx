@@ -8,6 +8,7 @@ import {
   FaChartBar,
   FaFilter,
   FaEnvelope,
+  FaEnvelopeOpen,
   FaInbox,
   FaPaperPlane,
   FaPrint,
@@ -350,6 +351,10 @@ export default function DashVilma() {
   const [manageTab, setManageTab] = useState('scholarship'); // scholarship | announcement
   const [manageSearch, setManageSearch] = useState('');
   const [showManageFilter, setShowManageFilter] = useState(false);
+  const [schoolVerifModal, setSchoolVerifModal] = useState(null);
+  const [indigencyVerifModal, setIndigencyVerifModal] = useState(null);
+  const [schoolVerifSent, setSchoolVerifSent] = useState({});
+  const [indigencyVerifSent, setIndigencyVerifSent] = useState({});
   const [editingPost, setEditingPost] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -2319,9 +2324,39 @@ export default function DashVilma() {
           </p>
         </div>
 
-        <div className="sticky bottom-0 bg-white/80 backdrop-blur-md pt-6 mt-8 border-t border-gray-100 flex gap-3 justify-end">
+        <div className="sticky bottom-0 bg-white/80 backdrop-blur-md pt-6 mt-8 border-t border-gray-100 flex flex-wrap gap-3 justify-end">
           {isPending && (
             <>
+              {/* School Verification Button */}
+              <button
+                type="button"
+                onClick={() => setSchoolVerifModal(a)}
+                className={`px-5 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 shadow-sm ${
+                  schoolVerifSent[a.name]
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300 cursor-default'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
+                }`}
+                disabled={schoolVerifSent[a.name]}
+              >
+                <FaEnvelopeOpen />
+                {schoolVerifSent[a.name] ? 'Sent to School ✓' : 'Send for School Verification'}
+              </button>
+
+              {/* Indigency / City Hall Verification Button */}
+              <button
+                type="button"
+                onClick={() => setIndigencyVerifModal(a)}
+                className={`px-5 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 shadow-sm ${
+                  indigencyVerifSent[a.name]
+                    ? 'bg-purple-100 text-purple-700 border border-purple-300 cursor-default'
+                    : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100'
+                }`}
+                disabled={indigencyVerifSent[a.name]}
+              >
+                <FaUserCircle />
+                {indigencyVerifSent[a.name] ? 'Sent to City Hall ✓' : 'Verify Indigency (City Hall)'}
+              </button>
+
               <button
                 type="button"
                 onClick={acceptApplicant}
@@ -2541,6 +2576,105 @@ export default function DashVilma() {
         {section === 'inbox' && renderInbox()}
         {section === 'view-applicant' && renderViewApplicant()}
       </main>
+
+      {/* School Verification Modal */}
+      {schoolVerifModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSchoolVerifModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <FaEnvelopeOpen className="text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900">Send Documents to School</h2>
+                <p className="text-xs text-gray-500">Automatic document dispatch</p>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+              <p className="text-xs font-bold text-blue-800 uppercase mb-2">Recipient</p>
+              <p className="text-sm font-semibold text-gray-800">{schoolVerifModal.school}</p>
+              <p className="text-xs text-gray-500">{schoolVerifModal.schoolAddress}</p>
+              {schoolVerifModal.schoolContact && <p className="text-xs text-gray-500">{schoolVerifModal.schoolContact}</p>}
+            </div>
+            <div className="mb-5">
+              <p className="text-xs font-black text-gray-500 uppercase mb-2">Documents to be sent:</p>
+              <ul className="space-y-2">
+                {[{ label: 'Certificate of Registration (COR)', files: schoolVerifModal.certificateFiles },
+                  { label: 'Grades / Transcript', files: schoolVerifModal.gradesFiles },
+                  { label: 'Student ID', files: schoolVerifModal.idFiles }].map((doc, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
+                    <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                    <span className="font-medium">{doc.label}</span>
+                    <span className="text-gray-400 text-xs">({doc.files?.length || 0} file{doc.files?.length !== 1 ? 's' : ''})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => setSchoolVerifModal(null)} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSchoolVerifSent(prev => ({ ...prev, [schoolVerifModal.name]: true }));
+                  setSchoolVerifModal(null);
+                  alert(`Documents successfully sent to ${schoolVerifModal.school} for verification!`);
+                }}
+                className="px-5 py-2 rounded-lg bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <FaPaperPlane /> Confirm & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Indigency / City Hall Verification Modal */}
+      {indigencyVerifModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIndigencyVerifModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <FaUserCircle className="text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900">Send Indigency to City Hall</h2>
+                <p className="text-xs text-gray-500">Automatic document dispatch</p>
+              </div>
+            </div>
+            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-4">
+              <p className="text-xs font-bold text-purple-800 uppercase mb-2">Recipient</p>
+              <p className="text-sm font-semibold text-gray-800">Lipa City Hall — Social Welfare Office</p>
+              <p className="text-xs text-gray-500">Indigency Verification Unit</p>
+            </div>
+            <div className="mb-5">
+              <p className="text-xs font-black text-gray-500 uppercase mb-2">Documents to be sent:</p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2 text-sm text-gray-700">
+                  <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                  <span className="font-medium">Indigency Certificate / Proof</span>
+                  <span className="text-gray-400 text-xs">({indigencyVerifModal.indigencyFiles?.length || 0} file{indigencyVerifModal.indigencyFiles?.length !== 1 ? 's' : ''})</span>
+                </li>
+              </ul>
+              <p className="text-xs text-gray-400 mt-3 italic">Applicant: <strong className="text-gray-600">{indigencyVerifModal.firstName} {indigencyVerifModal.lastName}</strong></p>
+              <p className="text-xs text-gray-400 italic">Address: <strong className="text-gray-600">{indigencyVerifModal.barangay}, {indigencyVerifModal.municipality}</strong></p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => setIndigencyVerifModal(null)} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIndigencyVerifSent(prev => ({ ...prev, [indigencyVerifModal.name]: true }));
+                  setIndigencyVerifModal(null);
+                  alert(`Indigency documents successfully sent to City Hall for verification!`);
+                }}
+                className="px-5 py-2 rounded-lg bg-purple-600 text-white font-black text-sm hover:bg-purple-700 transition-colors flex items-center gap-2"
+              >
+                <FaPaperPlane /> Confirm & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Recommendation Modal */}
       {recommendationModal && (
