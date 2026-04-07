@@ -191,6 +191,46 @@ const initialAfricaData = {
         { src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', type: 'video/mp4' },
       ],
     },
+    {
+      name: 'Chyle Magbuuhat',
+      lastName: 'Magbuuhat',
+      firstName: 'Chyle',
+      middleName: 'P.',
+      dob: '2005-08-22',
+      pob: 'Lipa City',
+      sex: 'Male',
+      citizenship: 'Filipino',
+      street: '123 Pineapple St',
+      barangay: 'Sabang',
+      municipality: 'Lipa City',
+      province: 'Batangas',
+      zipCode: '4217',
+      mobileNumber: '09170001114',
+      emailAddress: 'chyle.magbuuhat@example.com',
+      applicationType: 'Scholarship',
+      year: '1st',
+      course: 'Computer Science',
+      school: 'Lipa City Colleges',
+      schoolId: '44556677',
+      schoolAddress: 'Lipa City, Batangas',
+      schoolSector: 'Private',
+      grade: 92,
+      financial: 'Low',
+      location: 'Sabang, Lipa City, Batangas',
+      family: {
+        father: { name: 'Crisanto Magbuuhat', status: 'Living', job: 'Employee', phone: '09171234568' },
+        mother: { name: 'Cynthia Magbuuhat', status: 'Living', job: 'N/A', phone: '09179876545' },
+        grossIncome: '150,000',
+        siblingsCount: 2
+      },
+      studentContact: { phone: '09170001114', email: 'chyle.magbuuhat@example.com' },
+      education: 'Deans Lister potential',
+      signature: 'https://i.imgur.com/2h7z2S.jpg',
+      indigencyFiles: [{ src: 'https://i.imgur.com/2h7z2S.jpg', type: 'image/jpeg' }],
+      certificateFiles: [{ src: 'https://i.imgur.com/2h7z2S.jpg', type: 'image/jpeg' }],
+      gradesFiles: [{ src: 'https://i.imgur.com/2h7z2S.jpg', type: 'image/jpeg' }],
+      idFiles: [{ src: 'https://i.imgur.com/2h7z2S.jpg', type: 'image/jpeg' }],
+    },
   ],
   accepted: [],
   declined: [],
@@ -1331,9 +1371,10 @@ export default function DashAfrica() {
       });
     };
 
-    const allList = filterList(data.applicants);
+    const pendingList = filterList(data.applicants);
     const acceptedList = filterList(data.accepted);
     const declinedList = filterList(data.declined);
+    const allList = filterList([...data.applicants, ...data.accepted, ...data.declined]);
 
     return (
       <section className="bg-white p-6 rounded-xl shadow-sm">
@@ -1350,7 +1391,7 @@ export default function DashAfrica() {
 
         <div className="flex flex-wrap gap-2 mb-4 justify-between items-center">
           <div className="flex gap-2">
-            {['all', 'accepted', 'declined'].map((t) => (
+            {['all', 'pending', 'accepted', 'declined'].map((t) => (
               <button
                 key={t}
                 type="button"
@@ -1359,6 +1400,7 @@ export default function DashAfrica() {
                   }`}
               >
                 {t === 'all' && <FaUsers />}
+                {t === 'pending' && <FaClock />}
                 {t === 'accepted' && <FaCheckCircle />}
                 {t === 'declined' && <FaTimesCircle />}
                 {t === 'all' ? 'All Applicants' : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -1406,20 +1448,65 @@ export default function DashAfrica() {
                 <th className="px-4 py-3 text-left font-semibold">Financial</th>
                 <th className="px-4 py-3 text-left font-semibold">School</th>
                 <th className="px-4 py-3 text-left font-semibold">Contact & Address</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
                 <th className="px-4 py-3 text-left font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
-              {trackTab === 'all' &&
-                allList.map((a) => {
-                  const idx = data.applicants.indexOf(a);
+              {trackTab === 'all' && allList.map((a) => {
+                  let status = 'Pending';
+                  let color = 'amber';
+                  let listType = 'all'; 
+                  let idx = data.applicants.indexOf(a);
+
+                  if (idx < 0) {
+                    idx = data.accepted.indexOf(a);
+                    if (idx >= 0) {
+                      status = 'Accepted';
+                      color = 'green';
+                      listType = 'accepted';
+                    } else {
+                      idx = data.declined.indexOf(a);
+                      if (idx >= 0) {
+                        status = 'Declined';
+                        color = 'red';
+                        listType = 'declined';
+                      }
+                    }
+                  }
+
                   return (
-                    <tr key={`${a.name}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50">
+                    <tr key={`${a.name}-${listType}-${idx}`} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-4 py-3">{a.name}</td>
                       <td className="px-4 py-3">{a.grade}</td>
                       <td className="px-4 py-3">{a.financial}</td>
                       <td className="px-4 py-3 text-xs">{a.school}</td>
                       <td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 bg-${color}-100 text-${color}-700 rounded-full text-[10px] font-bold uppercase tracking-wider`}>{status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => viewApplicantFn(idx, listType)} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold hover:bg-[#650018] transition-colors">
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+              {trackTab === 'pending' &&
+                pendingList.map((a) => {
+                  const idx = data.applicants.indexOf(a);
+                  return (
+                    <tr key={`${a.name}-pending-${idx}`} className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-4 py-3">{a.name}</td>
+                      <td className="px-4 py-3">{a.grade}</td>
+                      <td className="px-4 py-3">{a.financial}</td>
+                      <td className="px-4 py-3 text-xs">{a.school}</td>
+                      <td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Pending</span>
+                      </td>
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => viewApplicantFn(idx, 'all')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold hover:bg-[#650018] transition-colors">
                           View
@@ -1439,6 +1526,9 @@ export default function DashAfrica() {
                       <td className="px-4 py-3">{a.financial}</td>
                       <td className="px-4 py-3 text-xs">{a.school}</td>
                       <td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Accepted</span>
+                      </td>
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => viewApplicantFn(idx, 'accepted')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">
                           View
@@ -1461,6 +1551,9 @@ export default function DashAfrica() {
                       <td className="px-4 py-3">{a.financial}</td>
                       <td className="px-4 py-3 text-xs">{a.school}</td>
                       <td className="px-4 py-3 text-[10px] leading-tight text-gray-600">{a.schoolContact || '(043) N/A'}<br />{a.schoolAddress || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Declined</span>
+                      </td>
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => viewApplicantFn(idx, 'declined')} className="px-3 py-1 rounded bg-[#800020] text-white text-xs font-semibold mr-1 hover:bg-[#650018] transition-colors">
                           View
