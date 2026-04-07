@@ -25,6 +25,7 @@ export default function Dash() {
   const [accountScholarship, setAccountScholarship] = useState('All');
   const [accountType, setAccountType] = useState('Admin'); // For management tab
   const [accountSearch, setAccountSearch] = useState(''); // For management tab
+  const [accountProgramFilter, setAccountProgramFilter] = useState('All'); // For filtering by program
 
   // Report Specific Filter States
   const [accReportFilter, setAccReportFilter] = useState({ program: 'All', role: 'All', search: '' });
@@ -46,7 +47,7 @@ export default function Dash() {
 
   // Form Field States (Accounts)
   const [accountForm, setAccountForm] = useState({
-    fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active'
+    fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active', scholarship: 'All'
   });
 
   // Mock Data
@@ -92,7 +93,14 @@ export default function Dash() {
   const filteredAccountReport = useMemo(() => {
     return accounts.filter(acc => {
       const matchProgram = accReportFilter.program === 'All' || acc.scholarship === accReportFilter.program;
-      const matchRole = accReportFilter.role === 'All' || acc.role === accReportFilter.role.toLowerCase();
+      
+      let matchRole = true;
+      if (accReportFilter.role === 'Admin') {
+        matchRole = ['admin', 'africa', 'vilma', 'tulong'].includes(acc.role);
+      } else if (accReportFilter.role === 'Scholar') {
+        matchRole = acc.role === 'user';
+      }
+      
       const matchSearch = acc.name.toLowerCase().includes(accReportFilter.search.toLowerCase()) ||
         acc.email.toLowerCase().includes(accReportFilter.search.toLowerCase());
       return matchProgram && matchRole && matchSearch;
@@ -117,11 +125,12 @@ export default function Dash() {
     if (mode === 'edit' && data) {
       setAccountForm({
         fullName: data.name, email: data.email, username: data.username || '', password: '',
-        role: data.role === 'admin' ? 'Admin' : 'Scholar',
-        status: data.status === 'active' ? 'Active' : 'Inactive'
+        role: data.role === 'admin' || data.role === 'africa' || data.role === 'vilma' || data.role === 'tulong' ? 'Admin' : 'Scholar',
+        status: data.status === 'active' ? 'Active' : 'Inactive',
+        scholarship: data.scholarship || 'All'
       });
     } else {
-      setAccountForm({ fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active' });
+      setAccountForm({ fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active', scholarship: 'All' });
     }
   };
 
@@ -130,7 +139,9 @@ export default function Dash() {
     if (accountModal.mode === 'add') {
       const newAcc = {
         id: accounts.length + 1, name: accountForm.fullName, email: accountForm.email,
-        username: accountForm.username, role: accountForm.role.toLowerCase(),
+        username: accountForm.username, 
+        role: accountForm.role === 'Admin' ? (accountForm.scholarship !== 'All' ? accountForm.scholarship.toLowerCase() : 'admin') : 'user',
+        scholarship: accountForm.scholarship,
         type: accountForm.role === 'Admin' ? 'Admin' : 'Applicant',
         status: accountForm.status.toLowerCase(), joined: new Date().toISOString().split('T')[0]
       };
@@ -138,7 +149,9 @@ export default function Dash() {
     } else {
       setAccounts(accounts.map(acc => acc.id === accountModal.data.id ? {
         ...acc, name: accountForm.fullName, email: accountForm.email, username: accountForm.username,
-        role: accountForm.role.toLowerCase(), status: accountForm.status.toLowerCase(),
+        role: accountForm.role === 'Admin' ? (accountForm.scholarship !== 'All' ? accountForm.scholarship.toLowerCase() : 'admin') : 'user',
+        scholarship: accountForm.scholarship,
+        status: accountForm.status.toLowerCase(),
       } : acc));
     }
     setAccountModal({ open: false });
@@ -178,6 +191,14 @@ export default function Dash() {
 
     if (reportForm.program !== 'All') {
       data = data.filter(item => (item.scholarship || item.program) === reportForm.program);
+    }
+
+    if (reportForm.type === 'Accounts' && reportForm.role !== 'All') {
+      if (reportForm.role === 'Admin') {
+        data = data.filter(acc => ['admin', 'africa', 'vilma', 'tulong'].includes(acc.role));
+      } else if (reportForm.role === 'Scholar') {
+        data = data.filter(acc => acc.role === 'user');
+      }
     }
 
     if (reportForm.format === 'Excel') {
@@ -333,10 +354,24 @@ export default function Dash() {
         {activeTab === 'manage-accounts' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex bg-gray-100 p-1 rounded-2xl">
+              <div className="flex bg-gray-100 p-1 rounded-2xl items-center">
                 {['Admin', 'Applicant'].map(t => (
                   <button key={t} onClick={() => setAccountType(t)} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${accountType === t ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:bg-white/50'}`}>{t}s</button>
                 ))}
+                
+                <div className="ml-8 flex items-center gap-2 pr-4 border-l border-gray-300 pl-4">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filter:</span>
+                  <select 
+                    value={accountProgramFilter} 
+                    onChange={(e) => setAccountProgramFilter(e.target.value)}
+                    className="bg-transparent text-xs font-black text-[#800020] uppercase tracking-widest border-none outline-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="All">All Programs</option>
+                    <option value="Africa">Africa</option>
+                    <option value="Vilma">Vilma</option>
+                    <option value="Tulong">Tulong</option>
+                  </select>
+                </div>
               </div>
               <button onClick={() => openAccountModal('add')} className="px-6 py-2 bg-[#800020] text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#800020]/20 flex items-center gap-2 hover:bg-[#650018] transition-all">
                 <FaPlus /> New {accountType}
@@ -361,7 +396,12 @@ export default function Dash() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {accounts.filter(a => a.type === accountType && (a.name.toLowerCase().includes(accountSearch.toLowerCase()) || a.email.toLowerCase().includes(accountSearch.toLowerCase()))).map(acc => (
+                  {accounts.filter(a => {
+                    const matchesType = a.type === accountType;
+                    const matchesSearch = a.name.toLowerCase().includes(accountSearch.toLowerCase()) || a.email.toLowerCase().includes(accountSearch.toLowerCase());
+                    const matchesProgram = accountProgramFilter === 'All' || a.scholarship === accountProgramFilter;
+                    return matchesType && matchesSearch && matchesProgram;
+                  }).map(acc => (
                     <tr key={acc.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-8 py-5">
                         <p className="font-black text-gray-900">{acc.name}</p>
@@ -580,6 +620,17 @@ export default function Dash() {
                       <option value="Scholar">Scholar</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Scholarship Program</label>
+                    <select value={accountForm.scholarship} onChange={e => setAccountForm({ ...accountForm, scholarship: e.target.value })} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black focus:ring-2 focus:ring-[#800020] outline-none">
+                      <option value="All">All / Global</option>
+                      <option value="Africa">Africa</option>
+                      <option value="Vilma">Vilma</option>
+                      <option value="Tulong">Tulong</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Access Status</label>
                     <select value={accountForm.status} onChange={e => setAccountForm({ ...accountForm, status: e.target.value })} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black focus:ring-2 focus:ring-[#800020] outline-none">

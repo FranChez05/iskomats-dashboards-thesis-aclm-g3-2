@@ -449,7 +449,13 @@ export default function DashAfrica() {
   const [viewMessage, setViewMessage] = useState(null); // { messageId }
   const [replyText, setReplyText] = useState('');
   const [recommendationModal, setRecommendationModal] = useState(false);
-  const [recommended, setRecommended] = useState([]);
+  const [recommendCount, setRecommendCount] = useState(10);
+
+  const recommended = useMemo(() => {
+    const count = parseInt(recommendCount) || 10;
+    return [...data.applicants].sort((a, b) => b.grade - a.grade).slice(0, count);
+  }, [data.applicants, recommendCount]);
+
   const [imageModalSrc, setImageModalSrc] = useState(null);
   const [scholarshipImages, setScholarshipImages] = useState([]);
   const [manageMode, setManageMode] = useState('list'); // create | edit | list
@@ -822,8 +828,6 @@ export default function DashAfrica() {
   };
 
   const recommendStudents = () => {
-    const top = [...data.applicants].sort((a, b) => b.grade - a.grade).slice(0, 3);
-    setRecommended(top);
     setRecommendationModal(true);
   };
 
@@ -1380,13 +1384,15 @@ export default function DashAfrica() {
       <section className="bg-white p-6 rounded-xl shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <h3 className="text-xl font-semibold text-[#800020]">Africa Scholarship - Track Applicants</h3>
-          <button
-            type="button"
-            onClick={recommendStudents}
-            className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors"
-          >
-            <FaRobot /> Recommended Student Applicants
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={recommendStudents}
+              className="px-4 py-2 rounded-lg bg-[#800020] text-white font-semibold flex items-center gap-2 hover:bg-[#650018] transition-colors shadow-lg shadow-rose-100"
+            >
+              <FaStar /> Recommended Student Applicants
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4 justify-between items-center">
@@ -3058,7 +3064,20 @@ export default function DashAfrica() {
       {recommendationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setRecommendationModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-[#800020] text-center mb-4">AI Recommended Applicants</h2>
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
+              <h2 className="text-xl font-bold text-[#800020]">Recommended Applicants</h2>
+              <div className="flex items-center gap-3 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+                <span className="text-xs font-black text-[#800020] uppercase tracking-wider">Number of Recommendations:</span>
+                <input
+                  type="number"
+                  autoFocus
+                  value={recommendCount}
+                  onChange={(e) => setRecommendCount(e.target.value)}
+                  className="w-16 text-center text-lg font-black bg-transparent border-none outline-none text-[#800020]"
+                  min="1"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {recommended.map((s, i) => (
                 <div key={`${s.name}-${i}`} className="border-2 border-gray-200 rounded-xl p-4 bg-rose-50/40 hover:border-[#800020] hover:shadow-lg transition-all">
