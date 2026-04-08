@@ -345,6 +345,8 @@ export default function DashVilma() {
   const [replyText, setReplyText] = useState('');
   const [recommendationModal, setRecommendationModal] = useState(false);
   const [recommendCount, setRecommendCount] = useState(10);
+  const [analyticsScholarshipFilter, setAnalyticsScholarshipFilter] = useState('all');
+  const [trackScholarshipFilter, setTrackScholarshipFilter] = useState('all');
   
   const recommended = useMemo(() => {
     const count = parseInt(recommendCount) || 10;
@@ -558,9 +560,18 @@ export default function DashVilma() {
   }, [data.announcements, manageSearch]);
 
   const stats = useMemo(() => {
-    const total = data.applicants.length + data.accepted.length + data.declined.length;
-    return { total, accepted: data.accepted.length, declined: data.declined.length, pending: data.applicants.length };
-  }, [data]);
+    const filterByScholarship = (list) => {
+      if (analyticsScholarshipFilter === 'all') return list;
+      return list.filter(a => a.appliedScholarshipId === analyticsScholarshipFilter || a.applicationType === analyticsScholarshipFilter);
+    };
+
+    const filteredPending = filterByScholarship(data.applicants);
+    const filteredAccepted = filterByScholarship(data.accepted);
+    const filteredDeclined = filterByScholarship(data.declined);
+
+    const total = filteredPending.length + filteredAccepted.length + filteredDeclined.length;
+    return { total, accepted: filteredAccepted.length, declined: filteredDeclined.length, pending: filteredPending.length };
+  }, [data, analyticsScholarshipFilter]);
 
   useEffect(() => {
     if (section !== 'reports') return;
@@ -1200,12 +1211,17 @@ export default function DashVilma() {
     const filterList = (list) => {
       return list.filter((a) => {
         const search = searchTrack.toLowerCase();
-        return (
+        const matchesSearch =
           a.name.toLowerCase().includes(search) ||
           (a.school && a.school.toLowerCase().includes(search)) ||
           (a.schoolAddress && a.schoolAddress.toLowerCase().includes(search)) ||
-          (a.schoolContact && a.schoolContact.toLowerCase().includes(search))
-        );
+          (a.schoolContact && a.schoolContact.toLowerCase().includes(search));
+        
+        const matchesScholarship = 
+          trackScholarshipFilter === 'all' || 
+          a.appliedScholarshipId === trackScholarshipFilter;
+
+        return matchesSearch && matchesScholarship;
       });
     };
 
@@ -1254,15 +1270,27 @@ export default function DashVilma() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 bg-gray-50 px-4 py-3 rounded-xl border border-gray-200 mb-6 max-w-md shadow-sm">
-          <FaSearch className="text-[#800020]" />
-          <input
-            type="text"
-            placeholder="Search by name, school, or address..."
-            value={searchTrack}
-            onChange={(e) => setSearchTrack(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-sm font-medium"
-          />
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-3 rounded-xl border border-gray-200 flex-1 max-w-md shadow-sm">
+            <FaSearch className="text-[#800020]" />
+            <input
+              type="text"
+              placeholder="Search by name, school, or address..."
+              value={searchTrack}
+              onChange={(e) => setSearchTrack(e.target.value)}
+              className="bg-transparent border-none outline-none w-full text-sm font-medium"
+            />
+          </div>
+          <select
+            value={trackScholarshipFilter}
+            onChange={(e) => setTrackScholarshipFilter(e.target.value)}
+            className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none font-bold text-[#800020] shadow-sm focus:ring-2 focus:ring-[#800020] transition-all"
+          >
+            <option value="all">All Scholarship Types</option>
+            {data.scholarshipPosts.map(post => (
+              <option key={post.id} value={post.id}>{post.title}</option>
+            ))}
+          </select>
         </div>
         <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="w-full text-sm">
@@ -1441,6 +1469,11 @@ export default function DashVilma() {
   const renderReports = () => {
     const { historicalData } = data;
 
+    // Filtered lists for the tables
+    const filteredPending = data.applicants.filter(a => analyticsScholarshipFilter === 'all' || a.appliedScholarshipId === analyticsScholarshipFilter);
+    const filteredAccepted = data.accepted.filter(a => analyticsScholarshipFilter === 'all' || a.appliedScholarshipId === analyticsScholarshipFilter);
+    const filteredDeclined = data.declined.filter(a => analyticsScholarshipFilter === 'all' || a.appliedScholarshipId === analyticsScholarshipFilter);
+
     const kpiCards = [
       { label: 'Total Applicants', value: stats.total.toLocaleString(), trend: '+10.2%', color: 'blue' },
       { label: 'New Applicants', value: data.applicants.length.toLocaleString(), trend: '+4.5%', color: 'green' },
@@ -1455,7 +1488,7 @@ export default function DashVilma() {
         {/* Header with Export Buttons */}
         <div className="flex items-center justify-between gap-3 flex-wrap report-header">
           <div>
-            <h3 className="text-2xl font-bold text-[#800020] report-title">Vilma Scholarship Reports</h3>
+            <h3 className="text-2xl font-bold text-[#800020] report-title">Gov. Vilma Scholarship Reports</h3>
             <p className="text-gray-500 text-sm report-subtitle">Comprehensive KPI report and periodic trends</p>
             <p className="print-only text-[10px] text-gray-400 mt-2 font-bold italic">Generated on: {new Date().toLocaleString()}</p>
           </div>
@@ -1470,6 +1503,18 @@ export default function DashVilma() {
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${reportsView === 'tables' ? 'bg-white text-[#800020] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >Tables</button>
             </div>
+
+            {/* Scholarship Filter - Visible in both views */}
+            <select
+              value={analyticsScholarshipFilter}
+              onChange={(e) => setAnalyticsScholarshipFilter(e.target.value)}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#800020] shadow-sm focus:ring-2 focus:ring-[#800020] transition-all outline-none"
+            >
+              <option value="all">All Scholarship Types</option>
+              {data.scholarshipPosts.map(post => (
+                <option key={post.id} value={post.id}>{post.title}</option>
+              ))}
+            </select>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1570,7 +1615,7 @@ export default function DashVilma() {
               <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col justify-center">
                 <h4 className="text-[#800020] font-black text-xl mb-3">Academic Partner Insights</h4>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  Current data shows that <strong>{historicalData.schoolStats[0].school}</strong> remains the primary source of applicants for the Vilma Scholarship, contributing to {historicalData.schoolStats[0].percentage}% of the total application volume.
+                  Current data shows that <strong>{historicalData.schoolStats[0].school}</strong> remains the primary source of applicants for the Gov. Vilma Scholarship, contributing to {historicalData.schoolStats[0].percentage}% of the total application volume.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-blue-100">
@@ -1829,16 +1874,21 @@ export default function DashVilma() {
                   {reportTab === 'pending' && (
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <h5 className="text-sm font-black text-amber-600 uppercase mb-4 flex items-center gap-2">
-                        <FaClock /> Pending Review ({data.applicants.length})
+                        <FaClock /> Pending Review ({filteredPending.length})
                       </h5>
                       <div className="overflow-x-auto max-h-72">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
                           <tbody className="divide-y divide-gray-100">
-                            {data.applicants.map((a, i) => (
-                              <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
+                            {filteredPending.map((a, i) => (
+                              <tr key={i} className="hover:bg-gray-50">
+                                   <td className="p-3 font-bold text-gray-800">{a.name}</td>
+                                   <td className="p-3">{a.grade}</td>
+                                   <td className="p-3">{a.financial}</td>
+                                   <td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td>
+                                 </tr>
                             ))}
-                            {data.applicants.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No applicants found</td></tr>}
+                            {filteredPending.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No pending applicants found for this scholarship</td></tr>}
                           </tbody>
                         </table>
                       </div>
@@ -1849,16 +1899,16 @@ export default function DashVilma() {
                   {reportTab === 'accepted' && (
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <h5 className="text-sm font-black text-green-600 uppercase mb-4 flex items-center gap-2">
-                        <FaCheckCircle /> Accepted Scholars ({data.accepted.length})
+                        <FaCheckCircle /> Accepted Scholars ({filteredAccepted.length})
                       </h5>
                       <div className="overflow-x-auto max-h-72">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
                           <tbody className="divide-y divide-gray-100">
-                            {data.accepted.map((a, i) => (
+                            {filteredAccepted.map((a, i) => (
                               <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
                             ))}
-                            {data.accepted.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No accepted scholars found</td></tr>}
+                            {filteredAccepted.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No accepted scholars found for this scholarship</td></tr>}
                           </tbody>
                         </table>
                       </div>
@@ -1869,16 +1919,16 @@ export default function DashVilma() {
                   {reportTab === 'declined' && (
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <h5 className="text-sm font-black text-red-600 uppercase mb-4 flex items-center gap-2">
-                        <FaTimesCircle /> Declined / Cancelled ({data.declined.length})
+                        <FaTimesCircle /> Declined / Cancelled ({filteredDeclined.length})
                       </h5>
                       <div className="overflow-x-auto max-h-72">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead><tr className="bg-gray-50 border-y border-gray-100"><th className="p-3 font-bold text-gray-500 uppercase">Student Name</th><th className="p-3 font-bold text-gray-500 uppercase">Grade</th><th className="p-3 font-bold text-gray-500 uppercase">Financial</th><th className="p-3 font-bold text-gray-500 uppercase">School Contact & Address</th></tr></thead>
                           <tbody className="divide-y divide-gray-100">
-                            {data.declined.map((a, i) => (
+                            {filteredDeclined.map((a, i) => (
                               <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold text-gray-800">{a.name}</td><td className="p-3">{a.grade}</td><td className="p-3">{a.financial}</td><td className="p-3">{a.schoolContact || '(043) N/A'} - {a.schoolAddress || 'N/A'}</td></tr>
                             ))}
-                            {data.declined.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No declined applicants found</td></tr>}
+                            {filteredDeclined.length === 0 && <tr><td colSpan="4" className="p-4 text-center text-gray-400 italic">No declined applicants found for this scholarship</td></tr>}
                           </tbody>
                         </table>
                       </div>
@@ -1893,7 +1943,7 @@ export default function DashVilma() {
         {/* DEDICATED PRINT-ONLY TABLE REPORT */}
         <div className="print-only mt-12 space-y-10">
           <div className="border-b-2 border-gray-200 pb-4 mb-8">
-            <h4 className="text-xl font-bold text-gray-800 uppercase tracking-widest">Detailed Scholarship Data Tables</h4>
+            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">Track Scholarship Applicants</h3>
           </div>
 
           <div className="space-y-8">
@@ -2086,7 +2136,7 @@ export default function DashVilma() {
             <div className="text-left">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Certified Correct By</p>
               <div className="h-10 w-48 border-b-2 border-gray-900/10 mb-2"></div>
-              <p className="text-xs font-black text-gray-900">Vilma Scholarship Administrator</p>
+              <p className="text-xs font-black text-gray-900">Scholarship Administrator</p>
             </div>
           </div>
         </div>
@@ -2464,7 +2514,7 @@ export default function DashVilma() {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center"><FaInbox className="text-xl text-white" /></div>
             <div>
-              <h2 className="text-xl font-bold">Vilma Scholarship Messenger</h2>
+              <h2 className="text-xl font-bold">Gov. Vilma Scholarship Messenger</h2>
               <p className="text-white/90 text-sm">Hello, {userFirstName}! {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
             </div>
           </div>
@@ -2612,7 +2662,7 @@ export default function DashVilma() {
               <img src={logo} alt="Scholarship Logo" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black tracking-tight leading-tight uppercase">Vilma</h2>
+              <h2 className="text-xl font-black tracking-tight leading-tight uppercase">Gov. Vilma Scholarship</h2>
               <p className="text-[10px] font-bold text-rose-200 tracking-[0.2em] uppercase opacity-70">Scholarship Program</p>
             </div>
           </div>
@@ -2635,7 +2685,7 @@ export default function DashVilma() {
       </aside>
 
       <main className="flex-1 p-6 overflow-y-auto">
-        <header className="bg-white rounded-xl shadow-sm px-6 py-4 mb-6 flex items-center gap-2 text-[#800020] font-bold text-xl"><FaTachometerAlt className="text-blue-600" /> Vilma Scholarship Dashboard</header>
+        <header className="bg-white rounded-xl shadow-sm px-6 py-4 mb-6 flex items-center gap-2 text-[#800020] font-bold text-xl"><FaTachometerAlt className="text-blue-600" /> Gov. Vilma Scholarship Dashboard</header>
         {section === 'dashboard' && renderDashboard()}
         {section === 'manage' && renderManage()}
         {section === 'track' && renderTrack()}

@@ -45,9 +45,8 @@ export default function Dash() {
   const [printData, setPrintData] = useState([]);
   const [printMetadata, setPrintMetadata] = useState({ title: '', subtitle: '', date: '' });
 
-  // Form Field States (Accounts)
   const [accountForm, setAccountForm] = useState({
-    fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active', scholarship: 'All'
+    fullName: '', email: '', username: '', password: '', role: 'Applicant', status: 'Active', scholarship: 'All'
   });
 
   // Mock Data
@@ -75,14 +74,16 @@ export default function Dash() {
 
   const [accounts, setAccounts] = useState([
     { id: 1, name: 'Main Admin', email: 'admin@iskomats.com', role: 'admin', scholarship: 'All', type: 'Admin', status: 'active', joined: '2025-01-10' },
-    { id: 2, name: 'Africa Admin', email: 'africa@iskomats.com', role: 'africa', scholarship: 'Africa', type: 'Admin', status: 'active', joined: '2025-02-05' },
-    { id: 3, name: 'Vilma Admin', email: 'vilma@iskomats.com', role: 'vilma', scholarship: 'Vilma', type: 'Admin', status: 'active', joined: '2025-02-12' },
-    { id: 4, name: 'Tulong Admin', email: 'tulong@iskomats.com', role: 'tulong', scholarship: 'Tulong', type: 'Admin', status: 'active', joined: '2025-02-20' },
-    { id: 5, name: 'Ana Arriola', email: 'ana.arriola@example.com', role: 'user', scholarship: 'Africa', type: 'Applicant', status: 'active', joined: '2026-03-01' },
-    { id: 6, name: 'Angela Cacao', email: 'angela.cacao@example.com', role: 'user', scholarship: 'Africa', type: 'Applicant', status: 'active', joined: '2026-03-02' },
-    { id: 7, name: 'Jashia Deveza', email: 'jashia.deveza@example.com', role: 'user', scholarship: 'Vilma', type: 'Applicant', status: 'active', joined: '2026-03-03' },
-    { id: 8, name: 'Kurt Yermo', email: 'kurt.yermo@example.com', role: 'user', scholarship: 'Tulong', type: 'Applicant', status: 'active', joined: '2026-03-04' },
-    { id: 9, name: 'Test User', email: 'test@example.com', role: 'user', scholarship: 'All', type: 'Applicant', status: 'suspended', joined: '2026-01-15' },
+    { id: 2, name: 'Africa Admin', email: 'africa@iskomats.com', role: 'africa', scholarship: 'Mayor Africa Scholarship', type: 'Admin', status: 'active', joined: '2025-02-05' },
+    { id: 3, name: 'Vilma Admin', email: 'vilma@iskomats.com', role: 'vilma', scholarship: 'Gov. Vilma Scholarship', type: 'Admin', status: 'active', joined: '2025-02-12' },
+    { id: 4, name: 'Tulong Admin', email: 'tulong@iskomats.com', role: 'tulong', scholarship: 'CHED scholarship(Tulong Dulong)', type: 'Admin', status: 'active', joined: '2025-02-20' },
+    { id: 5, name: 'Ana Arriola', email: 'ana.arriola@example.com', role: 'user', scholarship: 'Mayor Africa Scholarship', type: 'Applicant', status: 'active', joined: '2026-03-01' },
+    { id: 6, name: 'Angela Cacao', email: 'angela.cacao@example.com', role: 'user', scholarship: 'Mayor Africa Scholarship', type: 'Applicant', status: 'active', joined: '2026-03-02' },
+    { id: 7, name: 'Jashia Deveza', email: 'jashia.deveza@example.com', role: 'user', scholarship: 'Gov. Vilma Scholarship', type: 'Applicant', status: 'active', joined: '2026-03-03' },
+    { id: 8, name: 'Kurt Yermo', email: 'kurt.yermo@example.com', role: 'user', scholarship: 'CHED scholarship(Tulong Dulong)', type: 'Applicant', status: 'active', joined: '2026-03-04' },
+    { id: 8, name: 'Kurt Yermo', email: 'kurt.yermo@example.com', role: 'user', scholarship: 'CHED scholarship(Tulong Dulong)', type: 'Applicant', status: 'active', joined: '2026-03-04' },
+    { id: 9, name: 'Test User', email: 'test@example.com', role: 'user', scholarship: 'All', type: 'Applicant', status: 'pending', joined: '2026-01-15' },
+    { id: 10, name: 'New Applicant', email: 'new@example.com', role: 'user', scholarship: 'All', type: 'Applicant', status: 'pending', joined: '2026-04-01' },
   ]);
 
   const allActivities = useMemo(() => {
@@ -92,12 +93,14 @@ export default function Dash() {
   // Filtered Data for Reports
   const filteredAccountReport = useMemo(() => {
     return accounts.filter(acc => {
-      const matchProgram = accReportFilter.program === 'All' || acc.scholarship === accReportFilter.program;
+      const matchProgram = accReportFilter.program === 'All' ? true :
+                           accReportFilter.program === 'No Scholarship' ? (acc.scholarship === 'All' || !acc.scholarship) :
+                           acc.scholarship === accReportFilter.program;
       
       let matchRole = true;
       if (accReportFilter.role === 'Admin') {
         matchRole = ['admin', 'africa', 'vilma', 'tulong'].includes(acc.role);
-      } else if (accReportFilter.role === 'Scholar') {
+      } else if (accReportFilter.role === 'Applicant') {
         matchRole = acc.role === 'user';
       }
       
@@ -109,7 +112,9 @@ export default function Dash() {
 
   const filteredActivityReport = useMemo(() => {
     return allActivities.filter(log => {
-      const matchProgram = actReportFilter.program === 'All' || log.scholarship === actReportFilter.program;
+      const matchProgram = actReportFilter.program === 'All' ? true :
+                           actReportFilter.program === 'No Scholarship' ? (log.scholarship === 'All' || !log.scholarship) :
+                           log.scholarship === actReportFilter.program;
       const matchAction = actReportFilter.action === 'All' || log.activity.toLowerCase().includes(actReportFilter.action.toLowerCase());
       const matchSearch = log.user.toLowerCase().includes(actReportFilter.search.toLowerCase()) ||
         log.activity.toLowerCase().includes(actReportFilter.search.toLowerCase());
@@ -125,12 +130,12 @@ export default function Dash() {
     if (mode === 'edit' && data) {
       setAccountForm({
         fullName: data.name, email: data.email, username: data.username || '', password: '',
-        role: data.role === 'admin' || data.role === 'africa' || data.role === 'vilma' || data.role === 'tulong' ? 'Admin' : 'Scholar',
+        role: data.role === 'admin' || data.role === 'africa' || data.role === 'vilma' || data.role === 'tulong' ? 'Admin' : 'Applicant',
         status: data.status === 'active' ? 'Active' : 'Inactive',
         scholarship: data.scholarship || 'All'
       });
     } else {
-      setAccountForm({ fullName: '', email: '', username: '', password: '', role: 'Scholar', status: 'Active', scholarship: 'All' });
+      setAccountForm({ fullName: '', email: '', username: '', password: '', role: 'Applicant', status: 'Active', scholarship: 'All' });
     }
   };
 
@@ -196,7 +201,7 @@ export default function Dash() {
     if (reportForm.type === 'Accounts' && reportForm.role !== 'All') {
       if (reportForm.role === 'Admin') {
         data = data.filter(acc => ['admin', 'africa', 'vilma', 'tulong'].includes(acc.role));
-      } else if (reportForm.role === 'Scholar') {
+      } else if (reportForm.role === 'Applicant') {
         data = data.filter(acc => acc.role === 'user');
       }
     }
@@ -288,7 +293,7 @@ export default function Dash() {
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { label: 'Total Scholars', value: accounts.filter(a => a.type === 'Applicant').length, icon: <FaUserGraduate />, color: '#800020' },
+                { label: 'Total Applicants', value: accounts.filter(a => a.type === 'Applicant').length, icon: <FaUserGraduate />, color: '#800020' },
                 { label: 'System Uptime', value: '99.9%', icon: <FaCheckCircle />, color: '#16a34a' },
                 { label: 'Audit Logs', value: allActivities.length, icon: <FaClock />, color: '#d97706' }
               ].map((kpi, i) => (
@@ -329,7 +334,7 @@ export default function Dash() {
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
                   <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs mb-6 border-l-4 border-[#800020] pl-4">Regional Distribution</h4>
                   <div className="space-y-6">
-                    {['Africa', 'Vilma', 'Tulong'].map(sch => {
+                    {['Mayor Africa Scholarship', 'Gov. Vilma Scholarship', 'CHED scholarship(Tulong Dulong)'].map(sch => {
                       const count = accounts.filter(a => a.scholarship === sch).length;
                       const pct = (count / accounts.length) * 100;
                       return (
@@ -367,9 +372,10 @@ export default function Dash() {
                     className="bg-transparent text-xs font-black text-[#800020] uppercase tracking-widest border-none outline-none focus:ring-0 cursor-pointer"
                   >
                     <option value="All">All Programs</option>
-                    <option value="Africa">Africa</option>
-                    <option value="Vilma">Vilma</option>
-                    <option value="Tulong">Tulong</option>
+                    <option value="No Scholarship">No Scholarship</option>
+                    <option value="Mayor Africa Scholarship">Mayor Africa Scholarship</option>
+                    <option value="Gov. Vilma Scholarship">Gov. Vilma Scholarship</option>
+                    <option value="CHED scholarship(Tulong Dulong)">CHED scholarship(Tulong Dulong)</option>
                   </select>
                 </div>
               </div>
@@ -399,7 +405,9 @@ export default function Dash() {
                   {accounts.filter(a => {
                     const matchesType = a.type === accountType;
                     const matchesSearch = a.name.toLowerCase().includes(accountSearch.toLowerCase()) || a.email.toLowerCase().includes(accountSearch.toLowerCase());
-                    const matchesProgram = accountProgramFilter === 'All' || a.scholarship === accountProgramFilter;
+                    const matchesProgram = accountProgramFilter === 'All' ? true : 
+                                           accountProgramFilter === 'No Scholarship' ? (a.scholarship === 'All' || !a.scholarship) :
+                                           a.scholarship === accountProgramFilter;
                     return matchesType && matchesSearch && matchesProgram;
                   }).map(acc => (
                     <tr key={acc.id} className="hover:bg-gray-50/50 transition-colors">
@@ -408,12 +416,14 @@ export default function Dash() {
                         <p className="text-xs text-gray-400">{acc.email}</p>
                       </td>
                       <td className="px-8 py-5">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-100 bg-gray-50 text-gray-600">{acc.scholarship}</span>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${(!acc.scholarship || acc.scholarship === 'All') ? 'border-amber-100 bg-amber-50 text-amber-600' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
+                          {(!acc.scholarship || acc.scholarship === 'All') ? 'No Scholarship' : acc.scholarship}
+                        </span>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${acc.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${acc.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{acc.status}</span>
+                          <span className={`w-2 h-2 rounded-full ${acc.status === 'active' ? 'bg-green-500' : acc.status === 'pending' ? 'bg-amber-500' : 'bg-red-500'}`}></span>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${acc.status === 'active' ? 'text-green-600' : acc.status === 'pending' ? 'text-amber-600' : 'text-red-600'}`}>{acc.status}</span>
                         </div>
                       </td>
                       <td className="px-8 py-5 text-xs text-gray-400 font-mono">{acc.joined}</td>
@@ -450,9 +460,10 @@ export default function Dash() {
                   className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-[#800020]"
                 >
                   <option value="All">All Programs</option>
-                  <option value="Africa">Africa</option>
-                  <option value="Vilma">Vilma</option>
-                  <option value="Tulong">Tulong</option>
+                  <option value="No Scholarship">No Scholarship</option>
+                  <option value="Mayor Africa Scholarship">Mayor Africa Scholarship</option>
+                  <option value="Gov. Vilma Scholarship">Gov. Vilma Scholarship</option>
+                  <option value="CHED scholarship(Tulong Dulong)">CHED scholarship(Tulong Dulong)</option>
                 </select>
                 <select
                   value={accReportFilter.role}
@@ -461,7 +472,7 @@ export default function Dash() {
                 >
                   <option value="All">All Roles</option>
                   <option value="Admin">Admin</option>
-                  <option value="Scholar">Scholar</option>
+                  <option value="Applicant">Applicant</option>
                 </select>
                 <button onClick={() => exportToExcel(filteredAccountReport, 'Account_Distribution_Report')} className="px-6 py-2 bg-[#800020] text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#800020]/20 flex items-center gap-2">
                   <FaFileExcel /> Export ({filteredAccountReport.length})
@@ -527,9 +538,10 @@ export default function Dash() {
                   className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-[#800020]"
                 >
                   <option value="All">All Programs</option>
-                  <option value="Africa">Africa</option>
-                  <option value="Vilma">Vilma</option>
-                  <option value="Tulong">Tulong</option>
+                  <option value="No Scholarship">No Scholarship</option>
+                  <option value="Mayor Africa Scholarship">Mayor Africa Scholarship</option>
+                  <option value="Gov. Vilma Scholarship">Gov. Vilma Scholarship</option>
+                  <option value="CHED scholarship(Tulong Dulong)">CHED scholarship(Tulong Dulong)</option>
                 </select>
                 <select
                   value={actReportFilter.action}
@@ -590,7 +602,7 @@ export default function Dash() {
       {/* MODALS */}
       {accountModal.open && (
         <div className="fixed inset-0 bg-[#800020]/20 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-md overflow-hidden shadow-2xl border border-white/50 animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-white/50 animate-in fade-in zoom-in duration-300">
             <div className="bg-gradient-to-r from-[#800020] to-[#650018] p-8 text-white relative">
               <FaUsersCog className="absolute -top-4 -right-4 text-8xl opacity-10 rotate-12" />
               <h3 className="text-2xl font-black uppercase tracking-tighter">{accountModal.mode === 'add' ? 'Create Account' : 'Edit Account'}</h3>
@@ -617,16 +629,16 @@ export default function Dash() {
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">System Role</label>
                     <select value={accountForm.role} onChange={e => setAccountForm({ ...accountForm, role: e.target.value })} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black focus:ring-2 focus:ring-[#800020] outline-none">
                       <option value="Admin">Admin</option>
-                      <option value="Scholar">Scholar</option>
+                      <option value="Applicant">Applicant</option>
                     </select>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Scholarship Program</label>
                     <select value={accountForm.scholarship} onChange={e => setAccountForm({ ...accountForm, scholarship: e.target.value })} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black focus:ring-2 focus:ring-[#800020] outline-none">
-                      <option value="All">All / Global</option>
-                      <option value="Africa">Africa</option>
-                      <option value="Vilma">Vilma</option>
-                      <option value="Tulong">Tulong</option>
+                      <option value="All">No Scholarship</option>
+                      <option value="Mayor Africa Scholarship">Mayor Africa Scholarship</option>
+                      <option value="Gov. Vilma Scholarship">Gov. Vilma Scholarship</option>
+                      <option value="CHED scholarship(Tulong Dulong)">CHED scholarship(Tulong Dulong)</option>
                     </select>
                   </div>
                 </div>
@@ -681,9 +693,10 @@ export default function Dash() {
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Program Filter</label>
                   <select value={reportForm.program} onChange={e => setReportForm({ ...reportForm, program: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl text-xs font-black focus:ring-2 focus:ring-[#800020] outline-none">
                     <option value="All">All Programs</option>
-                    <option value="Africa">Africa</option>
-                    <option value="Vilma">Vilma</option>
-                    <option value="Tulong">Tulong</option>
+                    <option value="No Scholarship">No Scholarship</option>
+                    <option value="Mayor Africa Scholarship">Mayor Africa Scholarship</option>
+                    <option value="Gov. Vilma Scholarship">Gov. Vilma Scholarship</option>
+                    <option value="CHED scholarship(Tulong Dulong)">CHED scholarship(Tulong Dulong)</option>
                   </select>
                 </div>
                 <div>
